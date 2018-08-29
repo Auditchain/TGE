@@ -56,7 +56,7 @@ contract Ownable {
     * @dev The Ownable constructor sets the original `owner` of the contract to the sender
     * account.
     */
-    function Ownable() public {
+    constructor() public {
         owner = msg.sender;
     }
 
@@ -74,7 +74,7 @@ contract Ownable {
     */
     function transferOwnership(address newOwner) onlyOwner public {
         require(newOwner != address(0));
-        OwnershipTransferred(owner, newOwner);
+        emit OwnershipTransferred(owner, newOwner);
         owner = newOwner;
     }
 
@@ -112,7 +112,7 @@ contract Pausable is Ownable {
    */
     function pause() public onlyOwner whenNotPaused {
         paused = true;
-        Pause();
+        emit Pause();
     }
 
   /**
@@ -120,7 +120,7 @@ contract Pausable is Ownable {
    */
     function unpause() public onlyOwner whenPaused {
         paused = false;
-        Unpause();
+        emit Unpause();
     }
 }
 
@@ -176,15 +176,10 @@ contract Crowdsale is Pausable {
     event ReceivedETH(address backer, uint amount, uint tokenAmount);
     event RefundETH(address backer, uint amount);
 
-    // @notice to populate website with status of the sale 
-    function returnWebsiteData() external view returns(uint, uint, uint, uint, uint, uint, uint, uint, Step, bool, bool) {            
-    
-        return (startBlock, endBlock, backersIndex.length, ethReceivedPresale.add(ethReceivedMain), maxCap, minCap, totalTokensSent, tokenPriceWei, currentStep, paused, crowdsaleClosed);
-    }
 
     // Crowdsale  {constructor}
     // @notice fired when contract is crated. Initializes all constant and initial values.
-    function Crowdsale() public {               
+    constructor() public {               
         multisig = 0x6C88e6C76C1Eb3b130612D5686BE9c0A0C78925B; //TODO: Replace address with correct one
         team = 0x6C88e6C76C1Eb3b130612D5686BE9c0A0C78925B; //TODO: Replace address with correct one                                                                
         maxCap = 160000000e18;   // TODO: adjust maxCap by tokens sold in the private sale
@@ -265,7 +260,7 @@ contract Crowdsale is Pausable {
     }
 
     // @notice Fail-safe token transfer
-    function tokenDrian() external onlyOwner() {
+    function tokenDrain() external onlyOwner() {
         if (block.number > endBlock) {
             if (!token.transfer(team, token.balanceOf(this))) 
                 revert();
@@ -281,8 +276,7 @@ contract Crowdsale is Pausable {
         uint totalEtherReceived = ethReceivedPresale + ethReceivedMain;
 
         require(totalEtherReceived < minCap);  // ensure that campaign failed
-        require(this.balance > 0);  // contract will hold 0 ether at the end of campaign.                                  
-                                    // contract needs to be funded through fundContract() 
+        
         Backer storage backer = backers[msg.sender];
 
         require(backer.weiReceived > 0);  // ensure that user has sent contribution
@@ -295,7 +289,7 @@ contract Crowdsale is Pausable {
         if (!token.burn(msg.sender, backer.tokensSent)) // burn tokens
             revert();        
         msg.sender.transfer(backer.weiReceived);  // send back the contribution 
-        RefundETH(msg.sender, backer.weiReceived);
+        emit RefundETH(msg.sender, backer.weiReceived);
         return true;
     }
 
@@ -330,8 +324,8 @@ contract Crowdsale is Pausable {
         totalTokensSent = totalTokensSent + tokensToSend;     // update the total amount of tokens sent  
         if (!token.transfer(_backer, tokensToSend)) // Transfer tokens
             revert();      
-        multisig.transfer(this.balance);   // transfer funds to multisignature wallet             
-        ReceivedETH(_backer, msg.value, tokensToSend); // Register event       
+        multisig.transfer(msg.value);   // transfer funds to multisignature wallet             
+        emit ReceivedETH(_backer, msg.value, tokensToSend); // Register event       
     }
 
     // @notice It is called by determindPurchase() to determine amount of tokens for given contribution
@@ -405,7 +399,7 @@ contract Token is ERC20, Ownable {
     // @notice The Token constructor
     // @param _crowdSaleAddress {address} address of crowdsale contract
     // @param _tokensSoldPrivateSale {uint} tokens sold during private sale
-    function Token(address _crowdSaleAddress, uint _tokensSoldPrivateSale) public {
+    constructor (address _crowdSaleAddress, uint _tokensSoldPrivateSale) public {
         
         locked = true;  // Lock the transfCrowdsaleer function during the crowdsale
         totalSupply = 250000000e18; 
@@ -414,6 +408,7 @@ contract Token is ERC20, Ownable {
         decimals = 18; // Amount of decimals for display purposes
         crowdSaleAddress = _crowdSaleAddress;  
         balances[crowdSaleAddress] = 160000000e18 - _tokensSoldPrivateSale;  // maxCap is 160000000e18       
+        balances[owner] = totalSupply - balances[crowdSaleAddress];
     }
 
     // @notice unlock tokens for trading
@@ -433,7 +428,7 @@ contract Token is ERC20, Ownable {
     function burn( address _member, uint256 _value) public onlyAuthorized returns(bool) {
         balances[_member] = balances[_member].sub(_value);
         totalSupply = totalSupply.sub(_value);
-        Transfer(_member, 0x0, _value);
+        emit Transfer(_member, 0x0, _value);
         return true;
     }
 
@@ -444,7 +439,7 @@ contract Token is ERC20, Ownable {
     function transfer(address _to, uint _value) public onlyUnlocked returns(bool) {
         balances[msg.sender] = balances[msg.sender].sub(_value);
         balances[_to] = balances[_to].add(_value);
-        Transfer(msg.sender, _to, _value);
+        emit Transfer(msg.sender, _to, _value);
         return true;
     }
 
@@ -459,7 +454,7 @@ contract Token is ERC20, Ownable {
         balances[_from] = balances[_from].sub(_value); // Subtract from the sender
         balances[_to] = balances[_to].add(_value); // Add the same to the recipient
         allowed[_from][msg.sender] = allowed[_from][msg.sender].sub(_value);
-        Transfer(_from, _to, _value);
+        emit Transfer(_from, _to, _value);
         return true;
     }
 
@@ -481,7 +476,7 @@ contract Token is ERC20, Ownable {
     */
     function approve(address _spender, uint _value) public returns(bool) {
         allowed[msg.sender][_spender] = _value;
-        Approval(msg.sender, _spender, _value);
+        emit Approval(msg.sender, _spender, _value);
         return true;
     }
 
@@ -501,7 +496,7 @@ contract Token is ERC20, Ownable {
     */
     function increaseApproval (address _spender, uint _addedValue) public returns (bool success) {
         allowed[msg.sender][_spender] = allowed[msg.sender][_spender].add(_addedValue);
-        Approval(msg.sender, _spender, allowed[msg.sender][_spender]);
+        emit Approval(msg.sender, _spender, allowed[msg.sender][_spender]);
         return true;
     }
 
@@ -512,7 +507,7 @@ contract Token is ERC20, Ownable {
         } else {
             allowed[msg.sender][_spender] = oldValue.sub(_subtractedValue);
         }
-        Approval(msg.sender, _spender, allowed[msg.sender][_spender]);
+        emit Approval(msg.sender, _spender, allowed[msg.sender][_spender]);
         return true;
     }
 
