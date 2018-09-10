@@ -1,9 +1,9 @@
 {
-  "name": "coinlaunch-core",
-  "author": "Coinlaunch Inc.",
+  "name": "Auditchain",
+  "author": "Auditchain",
   "license": "MIT",
   "version": "0.2.1",
-  "description": "CoinLaunch Smart Contracts",
+  "description": "Auditchain Smart Contracts",
   "repository": "git@github.com:",
   "homepage": "https://github.com/",
   "bugs": {
