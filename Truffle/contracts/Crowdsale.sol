@@ -63,10 +63,8 @@ contract Crowdsale is Pausable {
     // @notice fired when contract is crated. Initializes all constant and initial values.
     constructor() public {     
 
-        // if (_multisig != address(0))        
-        //     multisig = _multisig;  
-        // else
-            multisig = 0x6C88e6C76C1Eb3b130612D5686BE9c0A0C78925B; //TODO: Replace address with correct one
+ 
+        multisig = 0x6C88e6C76C1Eb3b130612D5686BE9c0A0C78925B; //TODO: Replace address with correct one
         team = 0x6C88e6C76C1Eb3b130612D5686BE9c0A0C78925B; //TODO: Replace address with correct one                                                                
         maxCap = 160000000e18;   // TODO: adjust maxCap by tokens sold in the private sale
         minCap = 16667 ether;
