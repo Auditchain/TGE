@@ -8,9 +8,9 @@ contract CoinTokenMock is IERC20 {
 
     using SafeMath for uint256;
     uint256 public totalSupply = 1000000;
-    string public name = "Fractional";
+    string public name = "Auditchain";
     uint8 public decimals = 18;
-    string public symbol = "FRACT";
+    string public symbol = "AUDT";
 
     mapping(address => uint256) balances;
     mapping(address => mapping(address => uint256)) allowed;
