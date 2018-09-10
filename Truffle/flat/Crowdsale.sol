@@ -360,7 +360,9 @@ contract Crowdsale is Pausable {
 
     // Crowdsale  {constructor}
     // @notice fired when contract is crated. Initializes all constant and initial values.
-    constructor() public {               
+    constructor() public {     
+
+ 
         multisig = 0x6C88e6C76C1Eb3b130612D5686BE9c0A0C78925B; //TODO: Replace address with correct one
         team = 0x6C88e6C76C1Eb3b130612D5686BE9c0A0C78925B; //TODO: Replace address with correct one                                                                
         maxCap = 160000000e18;   // TODO: adjust maxCap by tokens sold in the private sale
@@ -381,12 +383,17 @@ contract Crowdsale is Pausable {
     // @notice Specify address of token contract
     // @param _tokenAddress {address} address of token contract
     function updateTokenAddress(Token _tokenAddress) external onlyOwner() {
+
+        require(_tokenAddress != address(0), "Token address can't be nothing");
         token = _tokenAddress;
     }
 
     // @notice It will be called by owner to start the sale    
+    // @param _block {uint} count of blocks defining length of the campin based on the length of block  
     function start(uint _block) external onlyOwner() {   
-        require(_block <= 371520);  // 4.3×60×24×60 days = 371520 assuming 4.3 blocks in minute       
+        //TODO: enter proper block number
+        // 4.3×60×24×60 days = 371520 assuming 4.3 blocks in a minute 
+        require(_block <= 371520, "Length of campaign can't be longer than 371520 blocks");       
         startBlock = block.number;
         endBlock = startBlock.add(_block); 
     }
@@ -395,8 +402,10 @@ contract Crowdsale is Pausable {
     // this function will allow on adjusting duration of campaign closer to the end 
     function adjustDuration(uint _block) external onlyOwner() {
         // 4.3*60*24*80 days = 495360 allow for 80 days of campaign assuming block takes 30 sec.
-        require(_block < 495360);  
-        require(_block > block.number.sub(startBlock)); // ensure that endBlock is not set in the past
+        require(startBlock > 0, "The campaign hasn't been started yet");
+        require(_block < 495360, "The campaign can be only extended to max 495360 blocks");  
+        // ensure that endBlock is not set in the past
+        require(startBlock.add(_block) > block.number, "Blocks can't be set in the past"); 
         endBlock = startBlock.add(_block); 
     }
 
@@ -404,6 +413,8 @@ contract Crowdsale is Pausable {
     // contract is deployed in presale mode
     // WARNING: there is no way to go back
     function advanceStep() external onlyOwner() {
+
+        require(startBlock != 0, "Campaign hasn't been started yet");
 
         currentStep = Step.FundingPublicSale;                                             
         minInvestETH = 1 ether/10;                                
@@ -486,7 +497,7 @@ contract Crowdsale is Pausable {
     // @return res {bool} true if transaction was successful
     function contribute(address _backer) internal whenNotPaused respectTimeFrame {
 
-        uint tokensToSend = determindPurchase();
+        uint tokensToSend = determindPurchase();       
             
         Backer storage backer = backers[_backer];
 
@@ -503,12 +514,15 @@ contract Crowdsale is Pausable {
             ethReceivedPresale = ethReceivedPresale.add(msg.value); 
             tokensSentPresale = tokensSentPresale + tokensToSend;
         }                                                     
-        totalTokensSent = totalTokensSent + tokensToSend;     // update the total amount of tokens sent  
+        totalTokensSent = totalTokensSent + tokensToSend;     // update the total amount of tokens sent         
         if (!token.transfer(_backer, tokensToSend)) // Transfer tokens
-            revert();      
+            revert("There was a problem transferring tokens");      
         multisig.transfer(msg.value);   // transfer funds to multisignature wallet             
         emit ReceivedETH(_backer, msg.value, tokensToSend); // Register event       
     }
+
+
+ 
 
     // @notice It is called by determindPurchase() to determine amount of tokens for given contribution
     // @param _tokenAmount {uint} basic amount of tokens
@@ -529,7 +543,7 @@ contract Crowdsale is Pausable {
     // @return tokensToSend {uint} proper number of tokens based on the timline
     function determindPurchase() internal view returns (uint) {
        
-        require(msg.value >= minInvestETH);   // ensure that min contributions amount is met
+        require(msg.value >= minInvestETH, "You have not met minimum contribution amount");   // ensure that min contributions amount is met
 
         // calculate amount of tokens to send  (add 18 0s first)   
         uint tokensToSend = msg.value.mul(1e18) / tokenPriceWei;  // basic nmumber of tokens to send
